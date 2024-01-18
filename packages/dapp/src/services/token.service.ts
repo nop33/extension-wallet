@@ -1,7 +1,8 @@
 import { getDefaultAlephiumWallet } from "@alephium/get-extension-wallet"
-import * as web3 from '@alephium/web3'
-import { binToHex, contractIdFromAddress, DUST_AMOUNT } from '@alephium/web3'
-import { ShinyToken, ShinyTokenInstance, Transfer } from '../../artifacts/ts'
+import * as web3 from "@alephium/web3"
+import { DUST_AMOUNT, binToHex, contractIdFromAddress } from "@alephium/web3"
+
+import { ShinyToken, ShinyTokenInstance, Transfer } from "../../artifacts/ts"
 
 export const erc20TokenAddressByNetwork = {
   "goerli-alpha":
@@ -24,7 +25,9 @@ export type TokenBalance = {
 export const getErc20TokenAddress = (network: PublicNetwork) =>
   erc20TokenAddressByNetwork[network]
 
-export const getTokenBalances = async (address: string): Promise<TokenBalance[]> => {
+export const getTokenBalances = async (
+  address: string,
+): Promise<TokenBalance[]> => {
   const alephium = await getDefaultAlephiumWallet()
   if (!alephium?.explorerProvider) {
     console.log("Alephium explorer provider not initialized")
@@ -32,22 +35,29 @@ export const getTokenBalances = async (address: string): Promise<TokenBalance[]>
   }
 
   const tokens: TokenBalance[] = []
-  const addressTokens = await alephium.explorerProvider.addresses.getAddressesAddressTokens(address)
+  const addressTokens =
+    await alephium.explorerProvider.addresses.getAddressesAddressTokens(address)
 
   for (const addressToken of addressTokens) {
     const tokensEntry = tokens.find((token) => token.id === addressToken)
-    const addressTokenBalance = await alephium.explorerProvider.addresses.getAddressesAddressTokensTokenIdBalance(address, addressToken)
+    const addressTokenBalance =
+      await alephium.explorerProvider.addresses.getAddressesAddressTokensTokenIdBalance(
+        address,
+        addressToken,
+      )
 
     if (tokensEntry) {
       tokensEntry.balance.balance += BigInt(addressTokenBalance.balance)
-      tokensEntry.balance.lockedBalance += BigInt(addressTokenBalance.lockedBalance)
+      tokensEntry.balance.lockedBalance += BigInt(
+        addressTokenBalance.lockedBalance,
+      )
     } else {
       tokens.push({
         id: addressToken,
         balance: {
           balance: BigInt(addressTokenBalance.balance),
-          lockedBalance: BigInt(addressTokenBalance.lockedBalance)
-        }
+          lockedBalance: BigInt(addressTokenBalance.lockedBalance),
+        },
       })
     }
   }
@@ -62,14 +72,16 @@ export const getAlphBalance = async (address: string) => {
     return undefined
   }
 
-  const balance = await alephium.explorerProvider.addresses.getAddressesAddressBalance(address)
+  const balance =
+    await alephium.explorerProvider.addresses.getAddressesAddressBalance(
+      address,
+    )
 
   return balance
 }
 
 export const mintToken = async (
   mintAmount: string,
-  network?: string
 ): Promise<web3.DeployContractResult<ShinyTokenInstance>> => {
   const alephium = await getDefaultAlephiumWallet()
   if (!alephium?.connectedAccount || !alephium?.connectedNetworkId) {
@@ -85,29 +97,25 @@ export const mintToken = async (
 
 export const withdrawMintedToken = async (
   amount: string,
-  tokenId: string
+  tokenId: string,
 ): Promise<web3.SignExecuteScriptTxResult> => {
   const alephium = await getDefaultAlephiumWallet()
   if (!alephium?.connectedAccount || !alephium?.connectedNetworkId) {
     throw Error("alephium object not initialized")
   }
 
-  return Transfer.execute(
-    alephium,
-    {
-      initialFields: {
-        shinyTokenId: binToHex(contractIdFromAddress(tokenId)),
-        to: alephium.connectedAccount.address,
-        amount: BigInt(amount)
-      }
-    }
-  )
+  return Transfer.execute(alephium, {
+    initialFields: {
+      shinyTokenId: binToHex(contractIdFromAddress(tokenId)),
+      to: alephium.connectedAccount.address,
+      amount: BigInt(amount),
+    },
+  })
 }
 export const transferToken = async (
   tokenId: string,
   transferTo: string,
   transferAmount: string,
-  network?: string
 ): Promise<web3.SignTransferTxResult> => {
   const alephium = await getDefaultAlephiumWallet()
   if (!alephium?.connectedAccount || !alephium?.connectedNetworkId) {
@@ -116,14 +124,17 @@ export const transferToken = async (
 
   return await alephium.signAndSubmitTransferTx({
     signerAddress: alephium.connectedAccount.address,
-    destinations: [{
-      address: transferTo,
-      attoAlphAmount: DUST_AMOUNT,
-      tokens: [{
-        id: tokenId,
-        amount: BigInt(transferAmount)
-      }
-      ]
-    }]
+    destinations: [
+      {
+        address: transferTo,
+        attoAlphAmount: DUST_AMOUNT,
+        tokens: [
+          {
+            id: tokenId,
+            amount: BigInt(transferAmount),
+          },
+        ],
+      },
+    ],
   })
 }

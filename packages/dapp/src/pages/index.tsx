@@ -1,56 +1,16 @@
+import { useWallet } from "@alephium/web3-react"
 import type { NextPage } from "next"
 import Head from "next/head"
 import { useEffect, useState } from "react"
+
 import { TokenDapp } from "../components/TokenDapp"
-import {
-  connectWallet,
-  disconnectWallet,
-  silentConnectWallet
-} from "../services/wallet.service"
 import styles from "../styles/Home.module.css"
 
 const Home: NextPage = () => {
+  const wallet = useWallet()
   const [address, setAddress] = useState<string>()
   const [network, setNetwork] = useState<string | undefined>(undefined)
   const [isConnected, setConnected] = useState(false)
-
-  useEffect(() => {
-    const handler = async () => {
-      if (!isConnected) {
-        silentConnectWallet(
-          () => {
-            return Promise.resolve(setConnected(false))
-          }
-        ).then(wallet => {
-          setAddress(wallet?.address)
-          setNetwork('devnet')
-          setConnected(!!wallet)
-        })
-      }
-    }
-
-    ; (async () => {
-      await handler()
-    })()
-  }, [isConnected])
-
-  const handleConnectClick = async () => {
-    const wallet = await connectWallet(
-      () => {
-        return Promise.resolve(setConnected(false))
-      }
-    )
-    setAddress(wallet?.address)
-    setNetwork('devnet')
-    setConnected(!!wallet)
-  }
-
-  const handleDisconnectClick = async () => {
-    await disconnectWallet()
-    setAddress(undefined)
-    setNetwork(undefined)
-    setConnected(false)
-  }
 
   return (
     <div className={styles.container}>
@@ -60,26 +20,20 @@ const Home: NextPage = () => {
       </Head>
 
       <main className={styles.main}>
-        {isConnected ? (
+        {wallet.connectionStatus === "connected" ? (
           <>
-            <button className={styles.connect} onClick={handleDisconnectClick}>
-              Disconnect
-            </button>
             <h3 style={{ margin: 0 }}>
-              Wallet address: <code>{address}</code>
+              Wallet address: <code>{wallet.account.address}</code>
             </h3>
             <h3 style={{ margin: 0 }}>
-              Network: <code>{network}</code>
+              Network: <code>{wallet.account.network}</code>
             </h3>
-            {address && (
-              <TokenDapp address={address} />
+            {wallet.account.address && (
+              <TokenDapp address={wallet.account.address} />
             )}
           </>
         ) : (
           <>
-            <button className={styles.connect} onClick={handleConnectClick}>
-              Connect Wallet
-            </button>
             <p>First connect wallet to use dapp.</p>
           </>
         )}
